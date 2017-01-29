@@ -48,22 +48,6 @@ Alternatively, you can use a one-liner of the above:
 apt-get build-dep python python3 -y && apt-get install -y build-essential gcc make zlib1g-dev libreadline-dev libncurses5-dev libbz2-dev libsqlite3-dev python-bsddb3 python3-bsddb3 libgdbm-dev libssl-dev python-tk python3-tk libdb-dev python-gdbm python-bsddb3 libffi-dev tcl8.6-dev libx11-dev libmpdec-dev libexpat1-dev zip && echo "success"
 ```
 
-### Python
-
-```sh
-./configure --prefix="$PWD"/out LDFLAGS="-static -static-libgcc -Wl,--unresolved-symbols=ignore-all -Wl,--export-dynamic" CPPFLAGS=-static CXXFLAGS=-static CFLAGS="-Os -static" LDFLAGS=-static ### LD=ld.gold
-./configure --prefix="$PWD"/out LDFLAGS="-static" CPPFLAGS=-static CXXFLAGS=-static CFLAGS="-Os -static"
-```
-
-after reading https://wiki.python.org/moin/BuildStatically
-./configure --prefix="$PWD"/out LDFLAGS="-static" CPPFLAGS=-static CXXFLAGS=-static CFLAGS="-Os -static" --disable-shared
-make LDFLAGS="-static" LINKFORSHARED=" "
-# TODO ssl module, maybe other modules
-
-
-http://stackoverflow.com/questions/1150373/compile-the-python-interpreter-statically:
-add -static-libgcc
-
 ### OpenSSL static libraries for Python
 
 This doesn't build the OpenSSL static binary itself.
