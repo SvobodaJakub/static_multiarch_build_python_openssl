@@ -8,10 +8,18 @@ Contents:
 * Creating an ARM architecture ubuntu 16.04 chroot on (presumably x86) ubuntu 16.04.
 
 Versions of software built:
-* openssl-1.0.2j
-* Python-3.5.2
+* openssl-1.0.2o
+* Python-3.5.5
 
 ## Build instructions for Python and OpenSSL on Ubuntu 16.04
+
+### Setting up the environment
+
+First of all, update the current system - update inside schroot if you are running in schroot or update the host system if you are doing the build directly on the host system:
+
+```sh
+apt-get update && apt-get upgrade -y
+```
 
 List of packages to install, copied from https://forum.xda-developers.com/android/software-hacking/scripting-python-static-2-7-8-3-4-2-t2958679/post57168101#post57168101
 
@@ -34,18 +42,24 @@ apt-get install -y libx11-dev # tkinter
 apt-get install -y libmpdec-dev # decimal
 ```
 
+An additional list of packages to install from https://stackoverflow.com/questions/12344970/building-python-from-source-with-zlib-support
+
+```sh
+apt-get install python-dev python-setuptools python-pip python-smbus libncursesw5-dev libgdbm-dev libc6-dev zlib1g-dev libsqlite3-dev tk-dev libssl-dev openssl -y
+apt-get build-dep python3.5 -y
+```
+
 Additionally, install:
 
 ```sh
 apt-get install -y libexpat1-dev # for pyexpat
 apt-get install -y zip
-
 ```
 
 Alternatively, you can use a one-liner of the above:
 
 ```sh
-apt-get build-dep python python3 -y && apt-get install -y build-essential gcc make zlib1g-dev libreadline-dev libncurses5-dev libbz2-dev libsqlite3-dev python-bsddb3 python3-bsddb3 libgdbm-dev libssl-dev python-tk python3-tk libdb-dev python-gdbm python-bsddb3 libffi-dev tcl8.6-dev libx11-dev libmpdec-dev libexpat1-dev zip && echo "success"
+apt-get build-dep python python3 -y && apt-get install -y build-essential gcc make zlib1g-dev libreadline-dev libncurses5-dev libbz2-dev libsqlite3-dev python-bsddb3 python3-bsddb3 libgdbm-dev libssl-dev python-tk python3-tk libdb-dev python-gdbm python-bsddb3 libffi-dev tcl8.6-dev libx11-dev libmpdec-dev python-dev python-setuptools python-pip python-smbus libncursesw5-dev libgdbm-dev libc6-dev zlib1g-dev libsqlite3-dev tk-dev libssl-dev openssl libexpat1-dev zip -y && apt-get build-dep python3.5 -y && echo "success"
 ```
 
 ### OpenSSL static libraries for Python
@@ -58,6 +72,8 @@ make
 make install
 ```
 
+Or use `build.sh` as described in the following *Python* subchapter.
+
 ### Python
 
 Inspiration:
@@ -65,7 +81,7 @@ Inspiration:
 * https://wiki.python.org/moin/BuildStatically
 * http://stackoverflow.com/questions/5937337/building-python-with-ssl-support-in-non-standard-location
 
-using Python 3.5.2
+using Python 3.5.5
 
 1) configure
 
@@ -91,6 +107,107 @@ Put this line at the beginning:
 Use the following configuration (the important parts are which lines are commented/uncommented):
 
 ```
+*static*
+
+# -*- makefile -*-
+# The file Setup is used by the makesetup script to construct the files
+# Makefile and config.c, from Makefile.pre and config.c.in,
+# respectively.  The file Setup itself is initially copied from
+# Setup.dist; once it exists it will not be overwritten, so you can edit
+# Setup to your heart's content.  Note that Makefile.pre is created
+# from Makefile.pre.in by the toplevel configure script.
+
+# (VPATH notes: Setup and Makefile.pre are in the build directory, as
+# are Makefile and config.c; the *.in and *.dist files are in the source
+# directory.)
+
+# Each line in this file describes one or more optional modules.
+# Modules enabled here will not be compiled by the setup.py script,
+# so the file can be used to override setup.py's behavior.
+
+# Lines have the following structure:
+#
+# <module> ... [<sourcefile> ...] [<cpparg> ...] [<library> ...]
+#
+# <sourcefile> is anything ending in .c (.C, .cc, .c++ are C++ files)
+# <cpparg> is anything starting with -I, -D, -U or -C
+# <library> is anything ending in .a or beginning with -l or -L
+# <module> is anything else but should be a valid Python
+# identifier (letters, digits, underscores, beginning with non-digit)
+#
+# (As the makesetup script changes, it may recognize some other
+# arguments as well, e.g. *.so and *.sl as libraries.  See the big
+# case statement in the makesetup script.)
+#
+# Lines can also have the form
+#
+# <name> = <value>
+#
+# which defines a Make variable definition inserted into Makefile.in
+#
+# Finally, if a line contains just the word "*shared*" (without the
+# quotes but with the stars), then the following modules will not be
+# built statically.  The build process works like this:
+#
+# 1. Build all modules that are declared as static in Modules/Setup,
+#    combine them into libpythonxy.a, combine that into python.
+# 2. Build all modules that are listed as shared in Modules/Setup.
+# 3. Invoke setup.py. That builds all modules that
+#    a) are not builtin, and
+#    b) are not listed in Modules/Setup, and
+#    c) can be build on the target
+#
+# Therefore, modules declared to be shared will not be
+# included in the config.c file, nor in the list of objects to be
+# added to the library archive, and their linker options won't be
+# added to the linker options. Rules to create their .o files and
+# their shared libraries will still be added to the Makefile, and
+# their names will be collected in the Make variable SHAREDMODS.  This
+# is used to build modules as shared libraries.  (They can be
+# installed using "make sharedinstall", which is implied by the
+# toplevel "make install" target.)  (For compatibility,
+# *noconfig* has the same effect as *shared*.)
+#
+# In addition, *static* explicitly declares the following modules to
+# be static.  Lines containing "*static*" and "*shared*" may thus
+# alternate throughout this file.
+
+# NOTE: As a standard policy, as many modules as can be supported by a
+# platform should be present.  The distribution comes with all modules
+# enabled that are supported by most platforms and don't require you
+# to ftp sources from elsewhere.
+
+
+# Some special rules to define PYTHONPATH.
+# Edit the definitions below to indicate which options you are using.
+# Don't add any whitespace or comments!
+
+# Directories where library files get installed.
+# DESTLIB is for Python modules; MACHDESTLIB for shared libraries.
+DESTLIB=$(LIBDEST)
+MACHDESTLIB=$(BINLIBDEST)
+
+# NOTE: all the paths are now relative to the prefix that is computed
+# at run time!
+
+# Standard path -- don't edit.
+# No leading colon since this is the first entry.
+# Empty since this is now just the runtime prefix.
+DESTPATH=
+
+# Site specific path components -- should begin with : if non-empty
+SITEPATH=
+
+# Standard path components for test modules
+TESTPATH=
+
+# Path components for machine- or system-dependent modules and shared libraries
+MACHDEPPATH=:$(PLATDIR)
+EXTRAMACHDEPPATH=
+
+COREPYTHONPATH=$(DESTPATH)$(SITEPATH)$(TESTPATH)$(MACHDEPPATH)$(EXTRAMACHDEPPATH)
+PYTHONPATH=$(COREPYTHONPATH)
+
 
 # The modules listed here can't be built as shared libraries for
 # various reasons; therefore they are listed here instead of in the
@@ -169,7 +286,7 @@ _struct _struct.c   # binary structure packing/unpacking
 #_weakref _weakref.c    # basic weak reference support
 #_testcapi _testcapimodule.c    # Python C API test module
 _random _randommodule.c # Random number generator
-_elementtree -I$(srcdir)/Modules/expat -DHAVE_EXPAT_CONFIG_H -DUSE_PYEXPAT_CAPI _elementtree.c  # elementtree accelerator
+_elementtree -I$(srcdir)/Modules/expat -DHAVE_EXPAT_CONFIG_H -DUSE_PYEXPAT_CAPI -DXML_DEV_URANDOM _elementtree.c    # elementtree accelerator
 _pickle _pickle.c   # pickle accelerator
 _datetime _datetimemodule.c # datetime accelerator
 _bisect _bisectmodule.c # Bisection algorithms
@@ -198,17 +315,22 @@ _socket socketmodule.c
 
 # Socket module helper for SSL support; you must comment out the other
 # socket line above, and possibly edit the SSL variable:
-SSL=/home/user/build/openssl-1.0.2j/out
+#SSL=/usr/local/ssl
+#_ssl _ssl.c \
+#   -DUSE_SSL -I$(SSL)/include -I$(SSL)/include/openssl \
+#   -L$(SSL)/lib -lssl -lcrypto
+SSL=/pythonbuild/Python-Python-3.5.5/openssl-1.0.2o/out
 _ssl _ssl.c \
     -DUSE_SSL -I$(SSL)/include -I$(SSL)/include/openssl \
     -L$(SSL)/lib -lssl -lcrypto -ldl
+
 
 # The crypt module is now disabled by default because it breaks builds
 # on many systems (where -lcrypt is needed), e.g. Linux (I believe).
 #
 # First, look at Setup.config; configure may have set this for you.
 
-_crypt _cryptmodule.c  -lcrypt  # crypt(3); needs -lcrypt on some systems
+_crypt _cryptmodule.c -lcrypt   # crypt(3); needs -lcrypt on some systems
 
 
 # Some more UNIX dependent modules -- off by default, since these
@@ -352,7 +474,9 @@ parser parsermodule.c
 # Andrew Kuchling's zlib module.
 # This require zlib 1.1.3 (or later).
 # See http://www.gzip.org/zlib/
-zlib zlibmodule.c -I$(prefix)/include -L$(exec_prefix)/lib -lz
+# https://stackoverflow.com/a/46964015
+zlib zlibmodule.c -I$(prefix)/include -I/usr/include -L$(exec_prefix)/lib -L/lib/arm-linux-gnueabihf -L/lib/x86_64-linux-gnu -lz
+
 
 # Interface to the Expat XML parser
 #
@@ -365,7 +489,7 @@ zlib zlibmodule.c -I$(prefix)/include -L$(exec_prefix)/lib -lz
 #
 # More information on Expat can be found at www.libexpat.org.
 #
-pyexpat expat/xmlparse.c expat/xmlrole.c expat/xmltok.c pyexpat.c -I$(srcdir)/Modules/expat -DHAVE_EXPAT_CONFIG_H -DUSE_PYEXPAT_CAPI
+pyexpat expat/xmlparse.c expat/xmlrole.c expat/xmltok.c pyexpat.c -I$(srcdir)/Modules/expat -DHAVE_EXPAT_CONFIG_H -DUSE_PYEXPAT_CAPI -DXML_DEV_URANDOM 
 
 # Hye-Shik Chang's CJKCodecs
 
@@ -384,15 +508,12 @@ _codecs_tw cjkcodecs/_codecs_tw.c
 
 # Another example -- the 'xxsubtype' module shows C-level subtyping in action
 xxsubtype xxsubtype.c
-
 ```
 
 In the text above, this is of special importance:
 
 ```
-# Socket module helper for SSL support; you must comment out the other
-# socket line above, and possibly edit the SSL variable:
-SSL=/home/user/build/openssl-1.0.2j/out
+SSL=/pythonbuild/Python-Python-3.5.5/openssl-1.0.2o/out
 _ssl _ssl.c \
     -DUSE_SSL -I$(SSL)/include -I$(SSL)/include/openssl \
     -L$(SSL)/lib -lssl -lcrypto -ldl
@@ -400,6 +521,13 @@ _ssl _ssl.c \
 
 The SSL variable should contain the path to the OpenSSL libraries we compiled in the "OpenSSL static libraries for Python" step above.
 The `-ldl` switch has to be added (on the last line)
+
+```
+# https://stackoverflow.com/a/46964015
+zlib zlibmodule.c -I$(prefix)/include -I/usr/include -L$(exec_prefix)/lib -L/lib/arm-linux-gnueabihf -L/lib/x86_64-linux-gnu -lz
+```
+
+There should be the appropriate paths for the architectures you want to build on in the `-L` arguments.
 
 3) make
 
@@ -432,6 +560,16 @@ rm -rf python3.5
 ```
 
 
+Or instead of all of the above, do it in an automated way that *shouldn't* break if the build environment is set up exactly as described:
+
+```sh
+grep -r pythonbuild .
+vi Setup # edit the path in Setup
+bash build.sh
+```
+
+Then run with `HOME=/your/home/directory LANG=C.utf-8 PYTHONIOENCODING=utf-8 PYTHONUTF8=1 PYTHONHOME=/path/to/where/lib/directory/is ./python3.5`. `PYTHONHOME` is the path to the `lib` directory that contains the `python35.zip` file.
+
 ### OpenSSL
 
 This builds a static OpenSSL binary.
@@ -445,6 +583,12 @@ Inspiration:
 ./config --prefix="$PWD"/out --openssldir="$PWD"/out -static -static-libgcc
 make
 make install
+```
+
+or
+
+```sh
+bash build.sh
 ```
 
 The binary is inside the `out` directory structure.
@@ -488,7 +632,15 @@ enter schroot:
 schroot -u root -c xenial-armhf
 ```
 
-Beware, the changed state is deleted after exit; it is not deleted if there are opened files, so opening mc from outside inside the chroot will prevent it from being destroyed, it can be attached later
+Beware, the changed state is deleted after exit; it is not deleted if there are opened files, so opening mc from outside inside the chroot will prevent it from being destroyed, it can be attached later.
+
+enter the "golden" schroot:
+```sh
+sudo schroot -c source:xenial-armhf -u root
+```
+
+The "golden" schroot has files directly in /var/lib/schroot/chroots/xenial-armhf and it is easier to launch multiple shells in it and it is slightly easier to work with, if you don't mind you will have to remove and reinstall it if you want to revert it to clean state.
+
 
 ### Building Python and OpenSSL in the ARM chroot
 
@@ -503,15 +655,15 @@ Copy openssl and python to the schroot.
 
 Extract
 ```sh
-tar xvf openssl-1.0.2j.tar.gz
-tar xvf Python-3.5.2.tgz
+tar xvf openssl-1.0.2o.tar.gz
+tar xvf Python-3.5.5.tgz
 ```
 
 Inside schroot:
 
 Install basic software (add whatever you need):
 ```sh
-apt-get install file ncdu vim # things to make my tinkering easier
+apt-get install file ncdu vim mc # things to make my tinkering easier
 ```
 
 Apt-get all the necessary stuff from the chapter "Build instructions for Python and OpenSSL on Ubuntu 16.04" and continue with the instructions in there.
